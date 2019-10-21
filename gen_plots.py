@@ -13,14 +13,20 @@ def get_params(p: argparse.ArgumentParser) -> argparse.Namespace:
     """
     p.add_argument('-f', '--folder', help='Folder relative to script location with CSVs to parse.', default='outputs')
     p.add_argument('-m', '--merge', help='Set the flag if you want to merge all the plots using the hidden state size.', action='store_true')
+    p.add_argument('-t', '--title', action='append', help='The header sequence for the CSVs in the folder.')
+    p.add_argument('-x', '--x_label', help='the index of the x label in the title list.', default=0, type=int)
+    p.add_argument('-y', '--y_label', help='the index of the y label in the title list.', default=1, type=int)
     return p.parse_args()
 
 
-def parse_and_gen_plots(rel_folder_path: str) -> None:
+def parse_and_gen_plots(rel_folder_path: str, header_seq: [str], x_label: int, y_label: int) -> None:
     """
     Parses the CSVs in a given folder and outputs a plot for each CSV.
 
     :param rel_folder_path: folder path with respect to the script location
+    :param header_seq: header sequence for the CSVs in the folder
+    :param x_label: an int that corresponds to the variable in the header sequence
+    :param y_label: an int that corresponds to the variable in the header sequence
     :return: None
     """
     sns.set()
@@ -30,11 +36,11 @@ def parse_and_gen_plots(rel_folder_path: str) -> None:
         file = os.path.join(rel_folder_path, output)
 
         try:
-            output_df = pd.read_csv(file, names=['iterations', 'train loss', 'test loss', 'accuracy'])
+            output_df = pd.read_csv(file, names=header_seq)
         except pd_errors.ParserError:
             continue
 
-        g = sns.relplot(x='iterations', y='accuracy', kind='line', data=output_df, aspect=1.5)
+        g = sns.relplot(x=header_seq[x_label], y=header_seq[y_label], kind='line', data=output_df, aspect=1.5)
         g.fig.autofmt_xdate()
         g.savefig(os.path.join(rel_folder_path, 'figures', '{fh}.png'.format(fh=output.split('.')[0])))
 
@@ -86,5 +92,5 @@ args = get_params(parser)
 if args.merge:
     parse_and_gen_single_plot(args.folder)
 else:
-    parse_and_gen_plots(args.folder)
+    parse_and_gen_plots(args.folder, args.title, args.x_label, args.y_label)
 
