@@ -71,13 +71,57 @@ class MAML:
 				# Note that at each inner update, always use inputa and labela for calculating gradients 
 				# and use inputb and labels for evaluating performance
 				# HINT: you may wish to use tf.gradients()
-				
+
 				# output, loss, and accuracy of group a before performing inner gradientupdate
-				task_outputa, task_lossa, task_accuracya = None, None, None
+				# task_outputa, task_lossa, task_accuracya = None, None, None
+
 				# lists to keep track of outputs, losses, and accuracies of group b for each inner_update
 				# where task_outputbs[i], task_lossesb[i], task_accuraciesb[i] are the output, loss, and accuracy
 				# after i+1 inner gradient updates
 				task_outputbs, task_lossesb, task_accuraciesb = [], [], []
+
+				task_outputa = self.forward_conv(inputa, weights, reuse)
+				task_lossa = tf.reduce_mean(self.loss_func(task_outputa, labela))
+				task_accuracya = tf.nn.softmax(logits=task_outputa)
+				task_accuracya = tf.math.equal(tf.argmax(task_accuracya, 1), tf.argmax(labela, 1))
+				task_accuracya = tf.reduce_mean(tf.cast(task_accuracya, "float"))
+
+				gradients_a = tf.gradients(task_lossa, list(weights.values()))
+				gradients_a = dict(zip(weights.keys(), gradients_a))
+
+				optim_list = []
+				for key in weights.keys():
+					optim_list.append(weights[key] - self.inner_update_lr * gradients_a[key])
+
+				optimized_weights = dict(zip(weights.keys(), optim_list))
+
+				task_outputbs.append(self.forward_conv(inputb, optimized_weights, True))
+				task_lossesb.append(tf.reduce_mean(self.loss_func(task_outputbs[-1], labelb)))
+				task_accuracyb = tf.nn.softmax(logits=task_outputbs[-1])
+				task_accuracyb = tf.math.equal(tf.argmax(task_accuracyb, 1), tf.argmax(labelb, 1))
+				task_accuraciesb.append(tf.reduce_mean(tf.cast(task_accuracyb, "float")))
+
+				for i in range(num_inner_updates - 1):
+					output_a = self.forward_conv(inputa, optimized_weights, True)
+					loss_a = tf.reduce_mean(self.loss_func(output_a, labela))
+
+					gradients_a = tf.gradients(loss_a, list(optimized_weights.values()))
+					gradients_a = dict(zip(weights.keys(), gradients_a))
+
+					optim_list = []
+					for key in weights.keys():
+						optim_list.append(weights[key] - self.inner_update_lr * gradients_a[key])
+
+					optimized_weights = dict(zip(weights.keys(), optim_list))
+
+					out = self.forward_conv(inputb, optimized_weights, True)
+					task_outputbs.append(out)
+					task_lossesb.append(tf.reduce_mean(self.loss_func(task_outputbs[-1], labelb)))
+
+					task_accuracyb = tf.nn.softmax(logits=task_outputbs[-1])
+					task_accuracyb = tf.math.equal(tf.argmax(task_accuracyb, 1), tf.argmax(labelb, 1))
+					task_accuraciesb.append(tf.reduce_mean(tf.cast(task_accuracyb, "float")))
+
 				#############################
 
 				task_output = [task_outputa, task_outputbs, task_lossa, task_lossesb, task_accuracya, task_accuraciesb]

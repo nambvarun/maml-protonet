@@ -18,10 +18,10 @@ from tensorflow.python.platform import flags
 
 FLAGS = flags.FLAGS
 
-## Dataset/method options
+# Dataset/method options
 flags.DEFINE_integer('n_way', 5, 'number of classes used in classification (e.g. 5-way classification).')
 
-## Training options
+# Training options
 flags.DEFINE_integer('meta_train_iterations', 15000, 'number of meta-training iterations.')
 # batch size during each step of meta-update (testing, validation, training)
 flags.DEFINE_integer('meta_batch_size', 25, 'number of tasks sampled per meta-update')
@@ -32,7 +32,7 @@ flags.DEFINE_integer('num_inner_updates', 1, 'number of inner gradient updates d
 flags.DEFINE_integer('num_filters', 16, 'number of filters for conv nets.')
 flags.DEFINE_bool('learn_inner_update_lr', False, 'learn the per-layer update learning rate.')
 
-## Logging, saving, and testing options
+# Logging, saving, and testing options
 flags.DEFINE_string('data_path', './omniglot_resized', 'path to the dataset.')
 flags.DEFINE_bool('log', True, 'if false, do not log summaries, for debugging code.')
 flags.DEFINE_string('logdir', '/tmp/data', 'directory for summaries and checkpoints.')
@@ -43,6 +43,8 @@ flags.DEFINE_bool('meta_test_set', False, 'Set to true to test on the the meta-t
 flags.DEFINE_integer('meta_train_k_shot', -1, 'number of examples used for gradient update during meta-training (use if you want to meta-test with a different number).')
 flags.DEFINE_float('meta_train_inner_update_lr', -1, 'value of inner gradient step step during meta-training. (use if you want to meta-test with a different value)')
 flags.DEFINE_integer('meta_test_num_inner_updates', 1, 'number of inner gradient updates during meta-test.')
+flags.DEFINE_string('csv_write_path', './outputs/{}-{}-lr{}.csv'.format(FLAGS.n_way, FLAGS.k_shot, FLAGS.inner_update_lr), 'output csv of the model')
+
 
 def meta_train(model, saver, sess, exp_string, data_generator, resume_itr=0):
 	SUMMARY_INTERVAL = 10    # interval for writing a summary (reduced from 100)
@@ -62,15 +64,28 @@ def meta_train(model, saver, sess, exp_string, data_generator, resume_itr=0):
 		#### YOUR CODE GOES HERE ####
 
 		# sample a batch of training data and partition into
-		# group a (inputa, labela) and group b (inputb, labelb)
+		# group a (input a, label a) and group b (input b, label b)
 
-		inputa, inputb, labela, labelb = None, None, None, None
+		inputs, labels = data_generator.sample_batch(batch_type='meta_train', batch_size=FLAGS.meta_batch_size, swap=False)
+
+		# (input a, label a) corresponds to the inner learning loop
+		inputa = inputs[:, :, :FLAGS.k_shot, :]
+		inputa = inputa.reshape(inputa.shape[0], -1, inputa.shape[3])
+		labela = labels[:, :, :FLAGS.k_shot, :]
+		labela = labela.reshape(labela.shape[0], -1, labela.shape[3])
+
+		# (input b, label b) corresponds to the outer learning loop
+		inputb = inputs[:, :, FLAGS.k_shot:, :]
+		inputb = inputb.reshape(inputb.shape[0], -1, inputb.shape[3])
+		labelb = labels[:, :, FLAGS.k_shot:, :]
+		labelb = labelb.reshape(labelb.shape[0], -1, labelb.shape[3])
+
 		#############################
 		feed_dict = {model.inputa: inputa, model.inputb: inputb,  model.labela: labela, model.labelb: labelb}
 
 		input_tensors = [model.metatrain_op]
 
-		if (itr % SUMMARY_INTERVAL == 0 or itr % PRINT_INTERVAL == 0):
+		if itr % SUMMARY_INTERVAL == 0 or itr % PRINT_INTERVAL == 0:
 			input_tensors.extend([model.summ_op, model.total_loss1, model.total_losses2[FLAGS.num_inner_updates-1],
 									model.total_accuracy1, model.total_accuracies2[FLAGS.num_inner_updates-1]])
 
@@ -82,22 +97,33 @@ def meta_train(model, saver, sess, exp_string, data_generator, resume_itr=0):
 				train_writer.add_summary(result[1], itr)
 			post_accuracies.append(result[-1])
 
-		if (itr!=0) and itr % PRINT_INTERVAL == 0:
+		if itr != 0 and itr % PRINT_INTERVAL == 0:
 			print_str = 'Iteration %d: pre-inner-loop accuracy: %.5f, post-inner-loop accuracy: %.5f' % (itr, np.mean(pre_accuracies), np.mean(post_accuracies))
 			print(print_str)
 			pre_accuracies, post_accuracies = [], []
 
-		if (itr!=0) and itr % SAVE_INTERVAL == 0:
+		if itr != 0 and itr % SAVE_INTERVAL == 0:
 			saver.save(sess, FLAGS.logdir + '/' + exp_string + '/model' + str(itr))
 
-		if (itr!=0) and itr % TEST_PRINT_INTERVAL == 0:
+		if itr != 0 and itr % TEST_PRINT_INTERVAL == 0:
 			#############################
 			#### YOUR CODE GOES HERE ####
 
-		    # sample a batch of validation data and partition into
-		    # group a (inputa, labela) and group b (inputb, labelb)
+			inputs, labels = data_generator.sample_batch(batch_type='meta_val', batch_size=FLAGS.meta_batch_size,
+														 swap=False)
 
-			inputa, inputb, labela, labelb = None, None, None, None
+			# (input a, label a) corresponds to the inner learning loop
+			inputa = inputs[:, :, :FLAGS.k_shot, :]
+			inputa = inputa.reshape(inputa.shape[0], -1, inputa.shape[3])
+			labela = labels[:, :, :FLAGS.k_shot, :]
+			labela = labela.reshape(labela.shape[0], -1, labela.shape[3])
+
+			# (input b, label b) corresponds to the outer learning loop
+			inputb = inputs[:, :, FLAGS.k_shot:, :]
+			inputb = inputb.reshape(inputb.shape[0], -1, inputb.shape[3])
+			labelb = labels[:, :, FLAGS.k_shot:, :]
+			labelb = labelb.reshape(labelb.shape[0], -1, labelb.shape[3])
+
 			#############################
 			feed_dict = {model.inputa: inputa, model.inputb: inputb,  model.labela: labela, model.labelb: labelb, model.meta_lr: 0.0}
 			input_tensors = [model.total_accuracy1, model.total_accuracies2[FLAGS.num_inner_updates-1]]
@@ -105,10 +131,14 @@ def meta_train(model, saver, sess, exp_string, data_generator, resume_itr=0):
 			result = sess.run(input_tensors, feed_dict)
 			print('Meta-validation pre-inner-loop accuracy: %.5f, meta-validation post-inner-loop accuracy: %.5f' % (result[-2], result[-1]))
 
+			with open(FLAGS.csv_write_path, 'a') as fh:
+				fh.write("{}, {}, {}\n".format(itr, result[-2], result[-1]))
+
 	saver.save(sess, FLAGS.logdir + '/' + exp_string +  '/model' + str(itr))
 
 # calculated for omniglot
 NUM_META_TEST_POINTS = 600
+
 
 def meta_test(model, saver, sess, exp_string, data_generator, meta_test_num_inner_updates=None):
 	num_classes = data_generator.num_classes
@@ -125,7 +155,21 @@ def meta_test(model, saver, sess, exp_string, data_generator, meta_test_num_inne
 		# sample a batch of test data and partition into
 		# group a (inputa, labela) and group b (inputb, labelb)
 
-		inputa, inputb, labela, labelb = None, None, None, None
+		inputs, labels = data_generator.sample_batch(batch_type='meta_test', batch_size=FLAGS.meta_batch_size,
+													 swap=False)
+
+		# (input a, label a) corresponds to the inner learning loop
+		inputa = inputs[:, :, :FLAGS.k_shot, :]
+		inputa = inputa.reshape(inputa.shape[0], -1, inputa.shape[3])
+		labela = labels[:, :, :FLAGS.k_shot, :]
+		labela = labela.reshape(labela.shape[0], -1, labela.shape[3])
+
+		# (input b, label b) corresponds to the outer learning loop
+		inputb = inputs[:, :, FLAGS.k_shot:, :]
+		inputb = inputb.reshape(inputb.shape[0], -1, inputb.shape[3])
+		labelb = labels[:, :, FLAGS.k_shot:, :]
+		labelb = labelb.reshape(labelb.shape[0], -1, labelb.shape[3])
+
 		#############################
 		feed_dict = {model.inputa: inputa, model.inputb: inputb, model.labela: labela, model.labelb: labelb, model.meta_lr: 0.0}
 
@@ -150,6 +194,7 @@ def meta_test(model, saver, sess, exp_string, data_generator, meta_test_num_inne
 		writer.writerow(means)
 		writer.writerow(stds)
 		writer.writerow(ci95)
+
 
 def main():
 	if FLAGS.meta_train == False:
@@ -205,6 +250,7 @@ def main():
 	else:
 		FLAGS.meta_batch_size = 1
 		meta_test(model, saver, sess, exp_string, data_generator, meta_test_num_inner_updates)
+
 
 if __name__ == "__main__":
 	main()
