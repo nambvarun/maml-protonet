@@ -43,7 +43,10 @@ flags.DEFINE_bool('meta_test_set', False, 'Set to true to test on the the meta-t
 flags.DEFINE_integer('meta_train_k_shot', -1, 'number of examples used for gradient update during meta-training (use if you want to meta-test with a different number).')
 flags.DEFINE_float('meta_train_inner_update_lr', -1, 'value of inner gradient step step during meta-training. (use if you want to meta-test with a different value)')
 flags.DEFINE_integer('meta_test_num_inner_updates', 1, 'number of inner gradient updates during meta-test.')
-flags.DEFINE_string('csv_write_path', './outputs/{}-{}-lr{}.csv'.format(FLAGS.n_way, FLAGS.k_shot, FLAGS.inner_update_lr), 'output csv of the model')
+
+# user defined
+flags.DEFINE_string('csv_write_folder', './outputs', 'folder path to save model logging')
+flags.DEFINE_string('csv_write_path', '{}/{}-{}-lr{}.csv'.format(FLAGS.csv_write_folder, FLAGS.n_way, FLAGS.k_shot, FLAGS.inner_update_lr), 'output csv of the model')
 
 
 def meta_train(model, saver, sess, exp_string, data_generator, resume_itr=0):

@@ -40,7 +40,6 @@ class MAML:
 			lossesb = [[]]*num_inner_updates
 			accuraciesb = [[]]*num_inner_updates
 
-
 			if 'weights' in dir(self):
 				training_scope.reuse_variables()
 				weights = self.weights
@@ -48,7 +47,6 @@ class MAML:
 				# Define the weights - these should NOT be directly modified by the
 				# inner training loop
 				self.weights = weights = self.construct_weights()
-
 
 			def task_inner_loop(inp, reuse=True):
 				"""
@@ -80,6 +78,14 @@ class MAML:
 				# after i+1 inner gradient updates
 				task_outputbs, task_lossesb, task_accuraciesb = [], [], []
 
+				if FLAGS.learn_inner_update_lr:
+					self.lr_weights = {}
+					for i in range(num_inner_updates):
+						weight_dict = {}
+						for j in weights.keys():
+							weight_dict[j] = tf.Variable(initial_value=self.inner_update_lr)
+						self.lr_weights[i] = weight_dict
+
 				task_outputa = self.forward_conv(inputa, weights, reuse)
 				task_lossa = tf.reduce_mean(self.loss_func(task_outputa, labela))
 				task_accuracya = tf.nn.softmax(logits=task_outputa)
@@ -91,7 +97,12 @@ class MAML:
 
 				optim_list = []
 				for key in weights.keys():
-					optim_list.append(weights[key] - self.inner_update_lr * gradients_a[key])
+					if FLAGS.learn_inner_update_lr:
+						lr = self.lr_weights[0][key]
+					else:
+						lr = self.inner_update_lr
+
+					optim_list.append(weights[key] - lr * gradients_a[key])
 
 				optimized_weights = dict(zip(weights.keys(), optim_list))
 
@@ -110,7 +121,12 @@ class MAML:
 
 					optim_list = []
 					for key in weights.keys():
-						optim_list.append(weights[key] - self.inner_update_lr * gradients_a[key])
+						if FLAGS.learn_inner_update_lr:
+							lr = self.lr_weights[0][key]
+						else:
+							lr = self.inner_update_lr
+
+						optim_list.append(weights[key] - lr * gradients_a[key])
 
 					optimized_weights = dict(zip(weights.keys(), optim_list))
 
