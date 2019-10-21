@@ -42,7 +42,8 @@ def parse_and_gen_plots(rel_folder_path: str, header_seq: [str], x_label: int, y
 
         g = sns.relplot(x=header_seq[x_label], y=header_seq[y_label], kind='line', data=output_df, aspect=1.5)
         g.fig.autofmt_xdate()
-        g.savefig(os.path.join(rel_folder_path, 'figures', '{fh}.png'.format(fh=output.split('.')[0])))
+        fh = ''.join(output.split('.')[:-1])
+        g.savefig(os.path.join(rel_folder_path, 'figures', '{fh}.png'.format(fh=fh)))
 
 
 def parse_and_gen_single_plot(rel_folder_path: str) -> None:
