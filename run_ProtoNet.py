@@ -99,6 +99,7 @@ if __name__ == '__main__':
 				# support and query sets
 
 				inputs, labels = data_generator.sample_batch('meta_val', batch_size=1, swap=False)
+
 				support, query, labels = split_sampled_dataset(inputs, labels)
 
 				#############################
