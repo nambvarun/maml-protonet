@@ -12,41 +12,32 @@ from models.ProtoNet import ProtoNet, ProtoLoss
 
 def parse_args():
 	parser = argparse.ArgumentParser()
-	parser.add_argument('data_path',
-						type=str,
-						default='./omniglot_resized',
-						help='Path to the omniglot dataset.')
-	parser.add_argument('--n-way',
-						'-w',
-						type=int,
-						default=20,
-						help="N-way classification")
-	parser.add_argument('--k-shot',
-						'-s',
-						type=int,
-						default=1,
-						help="Perform K-shot learning")
-	parser.add_argument('--n-query',
-						'-q',
-						type=int,
-						default=5,
-						help="Number of queries for Prototypical Networks")
-	parser.add_argument('--n-meta-test-way',
-						type=int,
-						default=20,
-						help="N-way classification at meta-test time")
-	parser.add_argument('--k-meta-test-shot',
-						type=int,
-						default=5,
-						help="Perform K-shot learning at meta-test time")
-	parser.add_argument('--n-meta-test-query',
-						type=int,
-						default=5,
-						help="Number of queries for Prototypical Networks at meta-test time")
+	parser.add_argument('--data_path', type=str, default='./omniglot_resized', help='Path to the omniglot dataset.')
+	parser.add_argument('--n-way', '-w', type=int, default=20, help="N-way classification")
+	parser.add_argument('--k-shot', '-s', type=int, default=1, help="Perform K-shot learning")
+	parser.add_argument('--n-query', '-q', type=int, default=5, help="Number of queries for Prototypical Networks")
+	parser.add_argument('--n-meta-test-way', type=int, default=20, help="N-way classification at meta-test time")
+	parser.add_argument('--k-meta-test-shot', type=int,	default=5, help="Perform K-shot learning at meta-test time")
+	parser.add_argument('--n-meta-test-query', type=int, default=5,	help="Number of queries for Prototypical Networks at meta-test time")
 
 	args = parser.parse_args()
 
 	return args
+
+
+def split_sampled_dataset(input_set: np.array, label_set: np.array) -> [np.array, np.array, np.array]:
+	# print(input_set.shape)
+	support_set = input_set[:, :, :k_shot, :]
+	support_set = support_set.reshape(n_way, k_shot, im_width, im_height, channels)
+	# print(support_set.shape)
+
+	query_set = input_set[:, :, k_shot:, :]
+	query_set = query_set.reshape(n_way, n_query, im_width, im_height, channels)
+
+	label_set = label_set[:, :, k_shot:, :]
+	label_set = label_set.reshape(n_way, n_query, n_way)
+
+	return support_set, query_set, label_set
 
 
 if __name__ == '__main__':
@@ -84,7 +75,7 @@ if __name__ == '__main__':
 	init_op = tf.global_variables_initializer()
 	sess.run(init_op)
 
-    # call DataGenerator with k_shot+n_query samples per class
+	# call DataGenerator with k_shot+n_query samples per class
 	data_generator = DataGenerator(n_way, k_shot+n_query, n_meta_test_way, k_meta_test_shot+n_meta_test_query, config={'data_folder': args.data_path})
 	for ep in range(n_epochs):
 		for epi in range(n_episodes):
@@ -92,21 +83,26 @@ if __name__ == '__main__':
 			#### YOUR CODE GOES HERE ####
 
 			# sample a batch of training data and partition into
-		    # support and query sets
-			
-			support, query, labels = None, None, None
+			# support and query sets
+
+			inputs, labels = data_generator.sample_batch('meta_train', batch_size=1, swap=False)
+			support, query, labels = split_sampled_dataset(inputs, labels)
+
+			# support, query, labels = None, None, None
 			#############################
-			_, ls, ac = sess.run([train_op, ce_loss, acc], feed_dict={x: support, q: query, labels_ph:labels})
+			_, ls, ac = sess.run([train_op, ce_loss, acc], feed_dict={x: support, q: query, labels_ph: labels})
 			if (epi+1) % 50 == 0:
 				#############################
 				#### YOUR CODE GOES HERE ####
 
-                # sample a batch of validation data and partition into
-		        # support and query sets
+				# sample a batch of validation data and partition into
+				# support and query sets
 
-				support, query, labels = None, None, None
+				inputs, labels = data_generator.sample_batch('meta_val', batch_size=1, swap=False)
+				support, query, labels = split_sampled_dataset(inputs, labels)
+
 				#############################
-				val_ls, val_ac = sess.run([ce_loss, acc], feed_dict={x: support, q: query, labels_ph:labels})
+				val_ls, val_ac = sess.run([ce_loss, acc], feed_dict={x: support, q: query, labels_ph: labels})
 				print('[epoch {}/{}, episode {}/{}] => meta-training loss: {:.5f}, meta-training acc: {:.5f}, meta-val loss: {:.5f}, meta-val acc: {:.5f}'.format(ep+1,
 																																		n_epochs,
 																																		epi+1,
@@ -122,12 +118,14 @@ if __name__ == '__main__':
 		#############################
 		#### YOUR CODE GOES HERE ####
 
-        # sample a batch of test data and partition into
-        # support and query sets
+		# sample a batch of test data and partition into
+		# support and query sets
 
-		support, query, labels = None, None, None
+		inputs, labels = data_generator.sample_batch('meta_test', batch_size=1, swap=False)
+		support, query, labels = split_sampled_dataset(inputs, labels)
+
 		#############################
-		ls, ac = sess.run([ce_loss, acc], feed_dict={x: support, q: query, labels_ph:labels})
+		ls, ac = sess.run([ce_loss, acc], feed_dict={x: support, q: query, labels_ph: labels})
 		meta_test_accuracies.append(ac)
 		if (epi+1) % 50 == 0:
 			print('[meta-test episode {}/{}] => loss: {:.5f}, acc: {:.5f}'.format(epi+1, n_meta_test_episodes, ls, ac))
