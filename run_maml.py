@@ -72,15 +72,15 @@ def meta_train(model, saver, sess, exp_string, data_generator, resume_itr=0):
 		inputs, labels = data_generator.sample_batch(batch_type='meta_train', batch_size=FLAGS.meta_batch_size, swap=False)
 
 		# (input a, label a) corresponds to the inner learning loop
-		inputa = inputs[:, :, :FLAGS.k_shot, :]
+		inputa = inputs[:, :, :FLAGS.meta_train_k_shot, :]
 		inputa = inputa.reshape(inputa.shape[0], -1, inputa.shape[3])
-		labela = labels[:, :, :FLAGS.k_shot, :]
+		labela = labels[:, :, :FLAGS.meta_train_k_shot, :]
 		labela = labela.reshape(labela.shape[0], -1, labela.shape[3])
 
 		# (input b, label b) corresponds to the outer learning loop
-		inputb = inputs[:, :, FLAGS.k_shot:, :]
+		inputb = inputs[:, :, FLAGS.meta_train_k_shot:, :]
 		inputb = inputb.reshape(inputb.shape[0], -1, inputb.shape[3])
-		labelb = labels[:, :, FLAGS.k_shot:, :]
+		labelb = labels[:, :, FLAGS.meta_train_k_shot:, :]
 		labelb = labelb.reshape(labelb.shape[0], -1, labelb.shape[3])
 
 		#############################
@@ -116,15 +116,15 @@ def meta_train(model, saver, sess, exp_string, data_generator, resume_itr=0):
 														 swap=False)
 
 			# (input a, label a) corresponds to the inner learning loop
-			inputa = inputs[:, :, :FLAGS.k_shot, :]
+			inputa = inputs[:, :, :FLAGS.meta_train_k_shot, :]
 			inputa = inputa.reshape(inputa.shape[0], -1, inputa.shape[3])
-			labela = labels[:, :, :FLAGS.k_shot, :]
+			labela = labels[:, :, :FLAGS.meta_train_k_shot, :]
 			labela = labela.reshape(labela.shape[0], -1, labela.shape[3])
 
 			# (input b, label b) corresponds to the outer learning loop
-			inputb = inputs[:, :, FLAGS.k_shot:, :]
+			inputb = inputs[:, :, FLAGS.meta_train_k_shot:, :]
 			inputb = inputb.reshape(inputb.shape[0], -1, inputb.shape[3])
-			labelb = labels[:, :, FLAGS.k_shot:, :]
+			labelb = labels[:, :, FLAGS.meta_train_k_shot:, :]
 			labelb = labelb.reshape(labelb.shape[0], -1, labelb.shape[3])
 
 			#############################
