@@ -22,6 +22,9 @@ class MAML:
 		self.channels = 1
 		self.img_size = int(np.sqrt(self.dim_input/self.channels))
 
+		if FLAGS.learn_inner_update_lr:
+			self.lr_weights = {}
+
 	def construct_model(self, prefix='maml'):
 		# a: group of data for calculating inner gradient
 		# b: group of data for evaluating modified weights and computing meta gradient
@@ -47,6 +50,13 @@ class MAML:
 				# Define the weights - these should NOT be directly modified by the
 				# inner training loop
 				self.weights = weights = self.construct_weights()
+
+			if FLAGS.learn_inner_update_lr:
+				for i in range(num_inner_updates):
+					weight_dict = {}
+					for j in weights.keys():
+						weight_dict[j] = tf.Variable(initial_value=FLAGS.inner_update_lr)
+					self.lr_weights[i] = weight_dict
 
 			def task_inner_loop(inp, reuse=True):
 				"""
@@ -77,14 +87,6 @@ class MAML:
 				# where task_outputbs[i], task_lossesb[i], task_accuraciesb[i] are the output, loss, and accuracy
 				# after i+1 inner gradient updates
 				task_outputbs, task_lossesb, task_accuraciesb = [], [], []
-
-				if FLAGS.learn_inner_update_lr:
-					self.lr_weights = {}
-					for i in range(num_inner_updates):
-						weight_dict = {}
-						for j in weights.keys():
-							weight_dict[j] = tf.Variable(initial_value=self.inner_update_lr)
-						self.lr_weights[i] = weight_dict
 
 				task_outputa = self.forward_conv(inputa, weights, reuse)
 				task_lossa = tf.reduce_mean(self.loss_func(task_outputa, labela))
