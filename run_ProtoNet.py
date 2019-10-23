@@ -25,17 +25,28 @@ def parse_args():
 	return args
 
 
-def split_sampled_dataset(input_set: np.array, label_set: np.array) -> [np.array, np.array, np.array]:
+def split_sampled_dataset(input_set: np.array, label_set: np.array, test: bool = False) -> [np.array, np.array, np.array]:
+
+	if test:
+		k = k_meta_test_shot
+		q = n_meta_test_query
+		w = n_meta_test_way
+	else:
+		k = k_shot
+		q = n_query
+		w = n_way
+
 	# print(input_set.shape)
-	support_set = input_set[:, :, :k_shot, :]
-	support_set = support_set.reshape(n_way, k_shot, im_width, im_height, channels)
+	support_set = input_set[:, :, :k, :]
+	support_set = support_set.reshape(w, k, im_width, im_height, channels)
 	# print(support_set.shape)
 
-	query_set = input_set[:, :, k_shot:, :]
-	query_set = query_set.reshape(n_way, n_query, im_width, im_height, channels)
+	query_set = input_set[:, :, k:, :]
+	query_set = query_set.reshape(w, q, im_width, im_height, channels)
 
-	label_set = label_set[:, :, k_shot:, :]
-	label_set = label_set.reshape(n_way, n_query, n_way)
+	# print(label_set.shape)
+	label_set = label_set[:, :, k:, :]
+	label_set = label_set.reshape(w, q, w)
 
 	return support_set, query_set, label_set
 
@@ -85,8 +96,11 @@ if __name__ == '__main__':
 			# sample a batch of training data and partition into
 			# support and query sets
 
-			inputs, labels = data_generator.sample_batch('meta_train', batch_size=1, swap=False)
+			inputs, labels = data_generator.sample_batch('meta_train', batch_size=1, swap=False, shuffle=False)
 			support, query, labels = split_sampled_dataset(inputs, labels)
+			# print(support.shape)
+			# print(query.shape)
+			# print(labels.shape)
 
 			# support, query, labels = None, None, None
 			#############################
@@ -98,8 +112,7 @@ if __name__ == '__main__':
 				# sample a batch of validation data and partition into
 				# support and query sets
 
-				inputs, labels = data_generator.sample_batch('meta_val', batch_size=1, swap=False)
-
+				inputs, labels = data_generator.sample_batch('meta_val', batch_size=1, swap=False, shuffle=False)
 				support, query, labels = split_sampled_dataset(inputs, labels)
 
 				#############################
@@ -122,8 +135,8 @@ if __name__ == '__main__':
 		# sample a batch of test data and partition into
 		# support and query sets
 
-		inputs, labels = data_generator.sample_batch('meta_test', batch_size=1, swap=False)
-		support, query, labels = split_sampled_dataset(inputs, labels)
+		inputs, labels = data_generator.sample_batch('meta_test', batch_size=1, swap=False, shuffle=False)
+		support, query, labels = split_sampled_dataset(inputs, labels, test=True)
 
 		#############################
 		ls, ac = sess.run([ce_loss, acc], feed_dict={x: support, q: query, labels_ph: labels})
