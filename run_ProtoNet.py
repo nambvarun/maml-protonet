@@ -19,6 +19,7 @@ def parse_args():
 	parser.add_argument('--n-meta-test-way', type=int, default=20, help="N-way classification at meta-test time")
 	parser.add_argument('--k-meta-test-shot', type=int,	default=5, help="Perform K-shot learning at meta-test time")
 	parser.add_argument('--n-meta-test-query', type=int, default=5,	help="Number of queries for Prototypical Networks at meta-test time")
+	parser.add_argument('--csv-write-path', type=str, default='./outputs-proto/5-1-5.csv', help="Path to write the val acc outputs.")
 
 	args = parser.parse_args()
 
@@ -26,7 +27,6 @@ def parse_args():
 
 
 def split_sampled_dataset(input_set: np.array, label_set: np.array, test: bool = False) -> [np.array, np.array, np.array]:
-
 	if test:
 		k = k_meta_test_shot
 		q = n_meta_test_query
@@ -125,6 +125,9 @@ if __name__ == '__main__':
 																																		ac,
 																																		val_ls,
 																																		val_ac))
+
+				with open(args.csv_write_path, 'a') as fh:
+					fh.write("{}, {}\n".format(int(ep * n_episodes + epi), val_ac))
 
 	print('Testing...')
 	meta_test_accuracies = []
