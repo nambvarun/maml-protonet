@@ -89,7 +89,7 @@ class MAML:
 				task_outputbs, task_lossesb, task_accuraciesb = [], [], []
 
 				task_outputa = self.forward_conv(inputa, weights, reuse)
-				task_lossa = tf.reduce_mean(self.loss_func(task_outputa, labela))
+				task_lossa = self.loss_func(task_outputa, labela)
 				task_accuracya = tf.nn.softmax(logits=task_outputa)
 				task_accuracya = tf.math.equal(tf.argmax(task_accuracya, 1), tf.argmax(labela, 1))
 				task_accuracya = tf.reduce_mean(tf.cast(task_accuracya, "float"))

@@ -73,13 +73,13 @@ def meta_train(model, saver, sess, exp_string, data_generator, resume_itr=0):
 
 		# (input a, label a) corresponds to the inner learning loop
 		inputa = inputs[:, :, :FLAGS.meta_train_k_shot, :]
-		inputa = inputa.reshape(inputa.shape[0], -1, inputa.shape[3])
+		# inputa = inputa.reshape(inputa.shape[0], -1, inputa.shape[3])
 		labela = labels[:, :, :FLAGS.meta_train_k_shot, :]
 		labela = labela.reshape(labela.shape[0], -1, labela.shape[3])
 
 		# (input b, label b) corresponds to the outer learning loop
 		inputb = inputs[:, :, FLAGS.meta_train_k_shot:, :]
-		inputb = inputb.reshape(inputb.shape[0], -1, inputb.shape[3])
+		# inputb = inputb.reshape(inputb.shape[0], -1, inputb.shape[3])
 		labelb = labels[:, :, FLAGS.meta_train_k_shot:, :]
 		labelb = labelb.reshape(labelb.shape[0], -1, labelb.shape[3])
 
@@ -117,13 +117,13 @@ def meta_train(model, saver, sess, exp_string, data_generator, resume_itr=0):
 
 			# (input a, label a) corresponds to the inner learning loop
 			inputa = inputs[:, :, :FLAGS.meta_train_k_shot, :]
-			inputa = inputa.reshape(inputa.shape[0], -1, inputa.shape[3])
+			# inputa = inputa.reshape(inputa.shape[0], -1, inputa.shape[3])
 			labela = labels[:, :, :FLAGS.meta_train_k_shot, :]
 			labela = labela.reshape(labela.shape[0], -1, labela.shape[3])
 
 			# (input b, label b) corresponds to the outer learning loop
 			inputb = inputs[:, :, FLAGS.meta_train_k_shot:, :]
-			inputb = inputb.reshape(inputb.shape[0], -1, inputb.shape[3])
+			# inputb = inputb.reshape(inputb.shape[0], -1, inputb.shape[3])
 			labelb = labels[:, :, FLAGS.meta_train_k_shot:, :]
 			labelb = labelb.reshape(labelb.shape[0], -1, labelb.shape[3])
 
@@ -163,13 +163,13 @@ def meta_test(model, saver, sess, exp_string, data_generator, meta_test_num_inne
 
 		# (input a, label a) corresponds to the inner learning loop
 		inputa = inputs[:, :, :FLAGS.k_shot, :]
-		inputa = inputa.reshape(inputa.shape[0], -1, inputa.shape[3])
+		# inputa = inputa.reshape(inputa.shape[0], -1, inputa.shape[3])
 		labela = labels[:, :, :FLAGS.k_shot, :]
 		labela = labela.reshape(labela.shape[0], -1, labela.shape[3])
 
 		# (input b, label b) corresponds to the outer learning loop
 		inputb = inputs[:, :, FLAGS.k_shot:, :]
-		inputb = inputb.reshape(inputb.shape[0], -1, inputb.shape[3])
+		# inputb = inputb.reshape(inputb.shape[0], -1, inputb.shape[3])
 		labelb = labels[:, :, FLAGS.k_shot:, :]
 		labelb = labelb.reshape(labelb.shape[0], -1, labelb.shape[3])
 
@@ -205,10 +205,10 @@ def main():
 		# always use meta batch size of 1 when testing.
 		FLAGS.meta_batch_size = 1
 
-    # call data_generator and get data with FLAGS.k_shot*2 samples per class
+	# call data_generator and get data with FLAGS.k_shot*2 samples per class
 	data_generator = DataGenerator(FLAGS.n_way, FLAGS.k_shot*2, FLAGS.n_way, FLAGS.k_shot*2, config={'data_folder': FLAGS.data_path})
 
-    # set up MAML model
+	# set up MAML model
 	dim_output = data_generator.dim_output
 	dim_input = data_generator.dim_input
 	meta_test_num_inner_updates = FLAGS.meta_test_num_inner_updates
